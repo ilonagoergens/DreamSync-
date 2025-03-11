@@ -50,13 +50,15 @@ jobs:
             echo "Bucket already exists."
           fi
 
+      # Setze die Bucket-Policy
       - name: Set S3 Bucket Policy
         run: |
-         aws s3api put-bucket-policy --bucket ${{ secrets.dreamsync-app-ilona }} --policy file://bucket-policy.json
+          aws s3api put-bucket-policy --bucket dreamsync-app-ilona --policy file://bucket-policy.json
 
+      # Stelle sicher, dass der S3-Bucket öffentlich zugänglich ist
       - name: Enable public access for S3 bucket
         run: |
-          aws s3api put-bucket-acl --bucket ${{ secrets.dreamsync-app-ilona }} --acl public-read
+          aws s3api put-bucket-acl --bucket dreamsync-app-ilona --acl public-read
 
         # Website-Hosting aktivieren
       - name: Enable static website hosting on S3
