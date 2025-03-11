@@ -41,5 +41,6 @@ jobs:
           AWS_REGION: 'eu-central-1'
           SOURCE_DIR: './app/dist'
           DESTINATION_DIR: 's3://dreamsync-app-ilona123'
+          AWS_S3_BUCKET: 'dreamsync-app-ilona123' 
 
     
