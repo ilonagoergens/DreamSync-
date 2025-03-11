@@ -50,6 +50,14 @@ jobs:
             echo "Bucket already exists."
           fi
 
+      - name: Set S3 Bucket Policy
+        run: |
+         aws s3api put-bucket-policy --bucket ${{ secrets.S3_BUCKET_NAME }} --policy file://bucket-policy.json
+
+      - name: Enable public access for S3 bucket
+        run: |
+          aws s3api put-bucket-acl --bucket ${{ secrets.S3_BUCKET_NAME }} --acl public-read
+
         # Website-Hosting aktivieren
       - name: Enable static website hosting on S3
         run: |
