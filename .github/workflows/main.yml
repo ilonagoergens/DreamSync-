@@ -50,6 +50,11 @@ jobs:
             echo "Bucket already exists."
           fi
 
+        # Website-Hosting aktivieren
+      - name: Enable static website hosting on S3
+        run: |
+          aws s3 website s3://dreamsync-app-ilona/ --index-document index.html --error-document 404.html
+
       # s3 Bucket Deployen
       - name: Deploy to S3
         run: |
