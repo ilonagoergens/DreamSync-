@@ -30,17 +30,17 @@ jobs:
 
       # Dieser Schritt richtet die AWS CLI ein und konfiguriert die notwendigen
       # AWS-Zugangsdaten (AWS Access Key ID und Secret Access Key) sowie die Region
-      - name: Set up AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-refion: ${{ secrets.AWS_REGION }}
+    - name: Set up AWS CLI
+       uses: aws-actions/configure-aws-credentials@v1
+       with:
+         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+         aws-refion: ${{ secrets.AWS_REGION }}
 
       # s3 Bucket Deployen
-      - name: Deploy to S3
-        run: |
-          aws s3 sync ./dist s3://dreamsync-app-ilona --delete
+     - name: Deploy to S3
+       run: |
+        aws s3 sync ./dist s3://dreamsync-app-ilona --delete
       
 
     
