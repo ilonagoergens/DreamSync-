@@ -41,6 +41,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Create S3 bucket if it doesn't exist
+        run: |
+          if ! aws s3api head-bucket --bucket dreamsync-app-ilona; then
+            echo "Bucket does not exist, creating..."
+            aws s3 mb s3://dreamsync-app-ilona
+          else
+            echo "Bucket already exists."
+          fi
+
       # s3 Bucket Deployen
       - name: Deploy to S3
         run: |
