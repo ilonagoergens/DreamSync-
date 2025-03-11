@@ -22,11 +22,15 @@ jobs:
 
       # Abhängigkeiten installieren
       - name: Install Dependencies
-        run: npm install
+        run: |
+          cd app
+          npm install
 
       # Build der Anwendung
       - name: Build the React App
-        run: npm run build
+        run: |
+          cd app
+          npm run build
 
       # Dieser Schritt richtet die AWS CLI ein und konfiguriert die notwendigen
       # AWS-Zugangsdaten (AWS Access Key ID und Secret Access Key) sowie die Region
@@ -40,7 +44,7 @@ jobs:
       # s3 Bucket Deployen
       - name: Deploy to S3
         run: |
-          aws s3 sync ./dist/ s3://dreamsync-app-ilona --delete
+          aws s3 sync ./app/dist/ s3://dreamsync-app-ilona --delete
 
 
     
