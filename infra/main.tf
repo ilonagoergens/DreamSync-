@@ -5,10 +5,15 @@ provider "aws" {
 
 resource "aws_s3_bucket" "website_bucket" {
   bucket = var.bucket_name
+}
 
-  website {
-    index_document = "index.html"
+resource "aws_s3_bucket_website_configuration" "example" {
+  bucket = aws_s3_bucket.website_bucket.id
+
+  index_document {
+    suffix = "index.html"
   }
+
 }
 
 # Blockieren des öffentlichen Zugriffs auf den S3-Bucket
@@ -23,8 +28,8 @@ resource "aws_s3_bucket_public_access_block" "public_access" {
 
 # S3 Bucket Policy, um den Zugriff auf die index.html-Datei zu ermöglichen
 resource "aws_s3_bucket_policy" "bucket_policy" {
-  bucket = aws_s3_bucket.website_bucket.id
-
+  bucket     = aws_s3_bucket.website_bucket.id
+  depends_on = [aws_s3_bucket_public_access_block.public_access]
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -44,4 +49,8 @@ resource "aws_s3_object" "index_html" {
   key          = "index.html"
   source       = "../app/index.html"
   content_type = "text/html"
+}
+
+output "website_endpoint" {
+  value = aws_s3_bucket_website_configuration.example.website_endpoint
 }
