@@ -9,3 +9,9 @@ variable "bucket_name" {
   type        = string
   default     = "dreamsync-app-ilona123" # vergebe einen eindeutigen Namen
 }
+
+variable "log_bucket_name" {
+  description = "Name of the log bucket"
+  type        = string
+  default     = "mylogs-ilona-logs" # Beispielname für den Log-Bucket, ändere ihn auf etwas Einzigartiges
+}

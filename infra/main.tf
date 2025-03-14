@@ -5,7 +5,29 @@ provider "aws" {
 
 resource "aws_s3_bucket" "website_bucket" {
   bucket = var.bucket_name
+
+  tags = {
+    Name = "Website Bucket"
+  }
 }
+
+resource "aws_s3_bucket" "log_bucket" {
+  bucket = var.log_bucket_name # Verwende den Log-Bucket-Namen aus der Variablen
+
+  tags = {
+    Name = "My CloudFront Logs Bucket"
+  }
+}
+
+# S3 Bucket Ownership Controls
+resource "aws_s3_bucket_ownership_controls" "log_bucket_ownership" {
+  bucket = aws_s3_bucket.log_bucket.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
 
 resource "aws_s3_bucket_website_configuration" "example" {
   bucket = aws_s3_bucket.website_bucket.id
@@ -16,41 +38,30 @@ resource "aws_s3_bucket_website_configuration" "example" {
 
 }
 
-# Blockieren des öffentlichen Zugriffs auf den S3-Bucket
-resource "aws_s3_bucket_public_access_block" "public_access" {
-  bucket = aws_s3_bucket.website_bucket.id
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
 # S3 Bucket Policy, um den Zugriff auf die index.html-Datei zu ermöglichen
 resource "aws_s3_bucket_policy" "bucket_policy" {
-  bucket     = aws_s3_bucket.website_bucket.id
-  depends_on = [aws_s3_bucket_public_access_block.public_access]
+  bucket = aws_s3_bucket.website_bucket.id
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        Effect    = "Allow",
-        Principal = "*",
-        Action    = "s3:GetObject",
-        Resource  = "${aws_s3_bucket.website_bucket.arn}/*"
+        Effect = "Allow",
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        },
+        Action   = "s3:GetObject",
+        Resource = "${aws_s3_bucket.website_bucket.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.website_distribution.arn
+          }
+        }
       }
     ]
   })
 }
 
-# Hochladen der index.html-Datei
-resource "aws_s3_object" "index_html" {
-  bucket       = aws_s3_bucket.website_bucket.bucket
-  key          = "index.html"
-  source       = "../app/index.html"
-  content_type = "text/html"
-}
-
-output "website_endpoint" {
-  value = aws_s3_bucket_website_configuration.example.website_endpoint
+# Ausgabe der S3-Website-URL
+output "s3_website_url" {
+  value = "http://${aws_s3_bucket.website_bucket.website_endpoint}"
 }
