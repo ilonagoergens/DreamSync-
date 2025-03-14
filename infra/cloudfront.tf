@@ -10,10 +10,11 @@ resource "aws_cloudfront_origin_access_identity" "oai" {
 
 # CloudFront Distribution für die S3-Website
 resource "aws_cloudfront_distribution" "website_distribution" {
+  # Hier greift Cloufront auf die daten zu
   origin {
     domain_name = aws_s3_bucket.website_bucket.bucket_regional_domain_name
     origin_id   = local.s3_origin_id
-
+  # Hier wird die OAI für den Zugriff auf die S3-Bucket-Dateien verwendet
     s3_origin_config {
       origin_access_identity = "origin-access-identity/cloudfront/${aws_cloudfront_origin_access_identity.oai.id}"
     }
@@ -53,49 +54,6 @@ resource "aws_cloudfront_distribution" "website_distribution" {
     max_ttl                = 86400
   }
 
-  ordered_cache_behavior {
-    path_pattern     = "/content/immutable/*"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD", "OPTIONS"]
-    target_origin_id = local.s3_origin_id
-
-    forwarded_values {
-      query_string = false
-      headers      = ["Origin"]
-
-      cookies {
-        forward = "none"
-      }
-    }
-
-    min_ttl                = 0
-    default_ttl            = 86400
-    max_ttl                = 31536000
-    compress               = true
-    viewer_protocol_policy = "redirect-to-https"
-  }
-
-  ordered_cache_behavior {
-    path_pattern     = "/content/*"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = local.s3_origin_id
-
-    forwarded_values {
-      query_string = false
-
-      cookies {
-        forward = "none"
-      }
-    }
-
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-    compress               = true
-    viewer_protocol_policy = "redirect-to-https"
-  }
-
   price_class = "PriceClass_100"
 
   restrictions {
@@ -103,10 +61,6 @@ resource "aws_cloudfront_distribution" "website_distribution" {
       restriction_type = "whitelist"
       locations        = ["DE"]  # Hier kannst du weitere Länder hinzufügen, wenn nötig
     }
-  }
-
-  tags = {
-    Environment = "production"
   }
 
   viewer_certificate {
