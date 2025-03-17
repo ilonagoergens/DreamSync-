@@ -1,61 +1,157 @@
-# Infrastruktur für DreamSync
+# DreamSync Infra Setup
 
-Diese Infrastruktur verwendet Terraform, um eine statische Website auf AWS S3 bereitzustellen.
+Dieses Projekt stellt eine Infrastruktur für eine einfache Website bereit, die auf Amazon Web Services (AWS) gehostet wird. Es nutzt Terraform, um Ressourcen wie S3-Buckets, CloudFront-Distributionen und DynamoDB für das Locking von Terraform-States zu erstellen.
 
 ## Voraussetzungen
 
-- Terraform (mindestens Version 1.x)
-- AWS CLI und AWS-Zugangsdaten (Access Key ID und Secret Access Key)
-- Ein AWS-Konto
+- **Terraform** (mindestens Version 1.0)
+- **AWS CLI** und ein AWS-Konto
+- **AWS IAM-Berechtigungen** für das Erstellen von S3-Buckets, CloudFront-Distributionen und DynamoDB-Tabellen
 
-## Setup und Nutzung
+## Projektstruktur
 
-1. **Terraform initialisieren**
+- `main.tf`: Die Hauptkonfiguration für die Infrastruktur, einschließlich der S3-Buckets und CloudFront-Distribution.
+- `cloudfront.tf`: Die Konfiguration für die CloudFront-Distribution, die die S3-Website bereitstellt.
+- `variables.tf`: Hier werden Variablen wie `aws_region`, `bucket_name` und `log_bucket_name` definiert.
+- `backend.tf`: Konfiguration des Terraform Backends, das den Remote-Backend für Terraform-States über S3 und DynamoDB verwendet.
+- `README.md`: Diese Datei.
 
-   Führe den folgenden Befehl aus, um Terraform im Verzeichnis zu initialisieren:
+## Setup-Anleitung
 
-   ```bash
-   terraform init
-   ```
+### 1. AWS-Region und Variablen anpassen
 
-2. **Variablen anpassen**
+Öffne die Datei `variables.tf` und passe die folgenden Variablen an:
 
-   Bearbeite die `variables.tf`-Datei oder stelle die Variablen in deiner Umgebung ein:
+```hcl
+variable "aws_region" {
+  description = "Aws region"
+  type        = string
+  default     = "eu-central-1" # Ändere dies auf deine Region
+}
 
-   - `aws_region`: Die AWS-Region, in der die Infrastruktur bereitgestellt wird (z. B. `eu-central-1`).
-   - `bucket_name`: Der Name des S3-Buckets, in dem die Website gehostet wird.
+variable "bucket_name" {
+  description = "Name of the bucket"
+  type        = string
+  default     = "dreamsync-app-ilona123" # Wähle einen einzigartigen Namen für deinen S3-Bucket
+}
 
-3. **Planung der Bereitstellung**
+variable "log_bucket_name" {
+  description = "Name of the log bucket"
+  type        = string
+  default     = "mylogs-ilona-logs" # Wähle einen einzigartigen Namen für den Log-Bucket
+}
+```
 
-   Stelle sicher, dass deine Terraform-Konfigurationen korrekt sind und führe den folgenden Befehl aus, um den Bereitstellungsplan zu überprüfen:
+### 2. DynamoDB-Tabelle für Terraform State Locking erstellen
 
-   ```bash
-   terraform plan
-   ```
+Bevor du mit Terraform arbeitest, musst du die DynamoDB-Tabelle für das Locking des Terraform-States erstellen. Dies kannst du über die AWS Management Console tun.
 
-4. **Bereitstellung**
+- **Tabelle erstellen**:
+  1. Gehe zu DynamoDB in der AWS Console.
+  2. Erstelle eine neue Tabelle namens `terraform-state-lock`.
+  3. Setze den **Partition Key** auf `LockID` (Typ: String).
+  4. Aktiviere die **Provisioned Capacity** oder **On-Demand**-Option, je nachdem, was für dich am besten passt.
 
-   Nachdem du den Plan überprüft hast, führe den folgenden Befehl aus, um die Infrastruktur bereitzustellen:
+Nachdem du diese Tabelle erstellt hast, kannst du Terraform mit dem Remote-Backend für das Locking des Terraform-States nutzen.
 
-   ```bash
-   terraform apply
-   ```
+### 3. Backend konfigurieren
 
-   Bestätige mit `yes`, um fortzufahren.
+In der Datei `backend.tf` wird das Backend für den Terraform-State konfiguriert, welches S3 und DynamoDB für das Locking nutzt. Stelle sicher, dass du den Namen des S3-Buckets (`techstarter-ilona-terraform-state`) und der DynamoDB-Tabelle (`terraform-state-lock`) anpasst:
 
-5. **Website-URL**
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "techstarter-ilona-terraform-state"  # Dein S3-Bucket-Name
+    key            = "terraform/state.tfstate"
+    region         = "eu-central-1"                      # Region (Europa Frankfurt)
+    encrypt        = true                                 # Verschlüsselung aktivieren
+    dynamodb_table = "terraform-state-lock"              # DynamoDB-Tabelle für Locking
+  }
+}
+```
 
-   Sobald die Bereitstellung abgeschlossen ist, kannst du deine statische Website unter der URL des S3-Buckets aufrufen. Die URL wird wie folgt gebildet:
+### 4. Ressourcen erstellen
 
-   ```
-   http://<bucket-name>.s3-website-<aws-region>.amazonaws.com
-   ```
+Um die Ressourcen in AWS zu erstellen, führe die folgenden Terraform-Befehle aus:
 
-6. **Hochladen der index.html**
+```bash
+terraform init     # Initialisiert das Terraform-Projekt
+terraform plan     # Zeigt die geplanten Änderungen an
+terraform apply    # Wendet die Änderungen an und erstellt die Infrastruktur
+```
 
-   Terraform kümmert sich um das Hochladen der `index.html`-Datei in den S3-Bucket. Stelle sicher, dass sich die Datei im Verzeichnis `../app/index.html` befindet, oder passe den Pfad im Terraform-Skript an.
+### 5. CloudFront Distribution
 
-## Weitere Anmerkungen
+Die CloudFront-Distribution wird mit einer OAI (Origin Access Identity) konfiguriert, um den Zugriff auf den S3-Bucket zu ermöglichen. Stelle sicher, dass CloudFront so konfiguriert ist, dass es die Dateien aus deinem S3-Bucket bereitstellt:
 
-- Diese Infrastruktur blockiert den öffentlichen Zugriff auf den S3-Bucket und stellt eine Bucket-Policy ein, um nur den Lesezugriff auf die `index.html` zu ermöglichen.
-- Falls du andere Dateien oder Assets hochladen möchtest, musst du die `aws_s3_object`-Ressource in `main.tf` erweitern.
+```hcl
+resource "aws_cloudfront_origin_access_identity" "oai" {
+  comment = "CloudFront OAI for S3 Bucket"
+}
+
+resource "aws_cloudfront_distribution" "website_distribution" {
+  origin {
+    domain_name = aws_s3_bucket.website_bucket.bucket_regional_domain_name
+    origin_id   = local.s3_origin_id
+    s3_origin_config {
+      origin_access_identity = "origin-access-identity/cloudfront/${aws_cloudfront_origin_access_identity.oai.id}"
+    }
+  }
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+  logging_config {
+    include_cookies = false
+    bucket          = aws_s3_bucket.log_bucket.bucket_regional_domain_name
+    prefix          = "myprefix"
+  }
+  default_cache_behavior {
+    allowed_methods  = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = local.s3_origin_id
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl          = 0
+    default_ttl      = 3600
+    max_ttl          = 86400
+  }
+  price_class = "PriceClass_100"
+  restrictions {
+    geo_restriction {
+      restriction_type = "whitelist"
+      locations        = ["DE"]  # Hier kannst du weitere Länder hinzufügen
+    }
+  }
+  viewer_certificate {
+    cloudfront_default_certificate = true  # Standard-CloudFront-Zertifikat
+  }
+}
+```
+
+### 6. Zugriff auf die Website
+
+Nach der erfolgreichen Anwendung von Terraform kannst du auf die bereitgestellte CloudFront-URL zugreifen. Diese URL wird in der Ausgabe angezeigt:
+
+```hcl
+output "cloudfront_url" {
+  value = aws_cloudfront_distribution.website_distribution.domain_name
+}
+```
+
+Die S3-Website-URL wird ebenfalls ausgegeben:
+
+```hcl
+output "s3_website_url" {
+  value = "http://${aws_s3_bucket.website_bucket.website_endpoint}"
+}
+```
+
+### 7. Logs
+
+Logs für den CloudFront-Verkehr werden in einem separaten S3-Bucket gespeichert. Stelle sicher, dass dieser korrekt eingerichtet ist und dass die `logging_config` der CloudFront-Distribution auf diesen Log-Bucket verweist.
+
+## Wichtige Hinweise
+
+- **DynamoDB für Terraform-States**: Die DynamoDB-Tabelle für das Locking des Terraform-States muss über die AWS Management Console erstellt werden. Diese Tabelle verhindert parallele Terraform-Läufe und stellt sicher, dass nur eine Instanz von Terraform gleichzeitig den State bearbeiten kann.
+  
+- **AWS IAM-Berechtigungen**: Stelle sicher, dass du über die richtigen IAM-Rollen und -Berechtigungen verfügst, um diese Ressourcen zu erstellen, zu verwalten und darauf zuzugreifen.
+
