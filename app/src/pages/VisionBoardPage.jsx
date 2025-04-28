@@ -271,6 +271,7 @@ function VisionBoardPage() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             <span>Mein Vision Board</span>
+            <p>Hallo von der Pipeline</p>
           </h2>
           <p className="text-gray-600 dark:text-gray-400">Visualisiere deine Ziele und Träume in verschiedenen Lebensbereichen</p>
         </div>
